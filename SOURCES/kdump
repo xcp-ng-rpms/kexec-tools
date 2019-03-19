@@ -89,8 +89,14 @@ crash_dump()
     echo OK
     echo s > /proc/sysrq-trigger
 
-    XEN_SYMTAB="/boot/xen-$CRASH_XENVERSION.map"
-    DOM0_SYMTAB="/boot/System.map-$CRASH_LINUXVERSION"
+    XEN_SYMTAB="/var/lib/kdump/xen-$CRASH_XENVERSION.map"
+    if [ ! -f "$XEN_SYMTAB" ]; then
+        XEN_SYMTAB="/boot/xen-$CRASH_XENVERSION.map"
+    fi
+    DOM0_SYMTAB="/var/lib/kdump/System.map-$CRASH_LINUXVERSION"
+    if [ ! -f "$DOM0_SYMTAB" ]; then
+        DOM0_SYMTAB="/boot/System.map-$CRASH_LINUXVERSION"
+    fi
 
     # Run xen-crashdump-analyser
     if [[ -e $XCA ]] ; then

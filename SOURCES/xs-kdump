@@ -46,18 +46,27 @@ else
         fi
     fi
 
+    rm -rf /var/lib/kdump
+    mkdir /var/lib/kdump
+
     # Check for xen symbol file
     xen_symfile="/boot/xen-$xen_version.map"
-    [[ -e "$xen_symfile" ]] || \
+    if [ -f "$xen_symfile" ]; then
+        cp -f "$xen_symfile" "/var/lib/kdump/xen-$xen_version.map"
+    else
         logger -t kdump $"Warning: can't find Xen symbol file '$xen_symfile'"
+    fi
 
     # Find the current dom0 kernel version
     dom0_kernel_version=$(uname -r)
 
     # Check for the dom0 symbol file
     dom0_symfile="/boot/System.map-$dom0_kernel_version"
-    [[ -e "$dom0_symfile" ]] || \
+    if [ -f "$dom0_symfile" ]; then
+        cp -f "$dom0_symfile" "/var/lib/kdump/System.map-$dom0_kernel_version"
+    else
         logger -t kdump $"Warning: can't find Dom0 symbol file '$dom0_symfile'"
+    fi
 
     # Convert xen serial console parameters to kdump serial parameters
     if [[ -n "$KDUMP_KERNEL_CMDLINE" ]] ; then

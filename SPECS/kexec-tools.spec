@@ -1,11 +1,13 @@
 Name: kexec-tools
 Summary: kexec/kdump userspace tools
+Epoch: 1
 Version: 2.0.4
-Release: 30
+Release: 1.1.4
 License: GPL
 
-Patch0: build-system-integration.patch
 Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/%{name}/archive?at=b2b9891ce6e&format=tar.gz&prefix=%{name}-%{version}#/%{name}-%{version}.tar.gz
+Patch0: 0001-purgatory-Add-no-zero-initialized-in-bss-flag.patch
+Patch1: 0002-purgatory-force-PIC-PIE-SSP-off.patch
 Source2: xs-kdump
 Source3: kdump.sysconfig
 Source5: kdump
@@ -20,7 +22,7 @@ Requires(postun): systemd
 kexec-tools, built and packaged as part of XenServer.
 
 %prep
-%autosetup -p1 -n kexec-tools-2.0.4
+%autosetup -p1
 
 %build
 ./bootstrap
@@ -77,3 +79,6 @@ exit 0
 %doc
 
 %changelog
+* Tue Jul 03 2018 Simon Rowe <simon.rowe@citrix.com> - 2.0.4-1.1.4
+- CA-197715: Override toolchain flags that affect purgatory runtime
+

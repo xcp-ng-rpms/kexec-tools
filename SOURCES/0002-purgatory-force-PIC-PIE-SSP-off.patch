@@ -1,0 +1,66 @@
+From b5d13c0c6bf0ed643c8e57759f92bc296f33db71 Mon Sep 17 00:00:00 2001
+From: Mike Frysinger <vapier@chromium.org>
+Date: Thu, 16 Apr 2015 03:39:26 -0400
+Subject: [PATCH 2/2] purgatory: force PIC/PIE/SSP off
+
+If the toolchain has these things turned on automatically, then the
+purgatory code might be miscompiled leading to runtime errors like:
+Unhandled rela relocation: R_X86_64_GOTPC64
+
+It might look like the problem is with the kernel when in reality,
+kexec is complaining about the purgatory module.  Force off harden
+features that don't make sense in kernel space.
+
+Signed-off-by: Mike Frysinger <vapier@chromium.org>
+Signed-off-by: Simon Horman <horms@verge.net.au>
+---
+ purgatory/Makefile            | 3 ++-
+ purgatory/arch/ppc64/Makefile | 5 +++--
+ purgatory/arch/s390/Makefile  | 1 -
+ 3 files changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/purgatory/Makefile b/purgatory/Makefile
+index 1c7d2c0..aa1371b 100644
+--- a/purgatory/Makefile
++++ b/purgatory/Makefile
+@@ -48,7 +48,8 @@ $(PURGATORY): CC=$(TARGET_CC)
+ $(PURGATORY): CFLAGS+=$(PURGATORY_EXTRA_CFLAGS) \
+ 		      $($(ARCH)_PURGATORY_EXTRA_CFLAGS) \
+ 		      -Os -fno-builtin -ffreestanding \
+-		      -fno-zero-initialized-in-bss
++		      -fno-zero-initialized-in-bss \
++		      -fno-PIC -fno-PIE -fno-stack-protector
+ 
+ $(PURGATORY): CPPFLAGS=$($(ARCH)_PURGATORY_EXTRA_CFLAGS) \
+ 			-I$(srcdir)/purgatory/include \
+diff --git a/purgatory/arch/ppc64/Makefile b/purgatory/arch/ppc64/Makefile
+index 6f6716e..642e89b 100644
+--- a/purgatory/arch/ppc64/Makefile
++++ b/purgatory/arch/ppc64/Makefile
+@@ -9,8 +9,9 @@ ppc64_PURGATORY_SRCS += purgatory/arch/ppc64/console-ppc64.c
+ ppc64_PURGATORY_SRCS += purgatory/arch/ppc64/crashdump_backup.c
+ ppc64_PURGATORY_SRCS += purgatory/arch/ppc64/misc.S
+ 
+-ppc64_PURGATORY_EXTRA_CFLAGS += -m64 -mcall-aixdesc -msoft-float
+-ppc64_PURGATORY_EXTRA_ASFLAGS += -m64 -mcall-aixdesc
++ppc64_PURGATORY_EXTRA_CFLAGS += -m64 -msoft-float \
++				-fno-exceptions
++ppc64_PURGATORY_EXTRA_ASFLAGS += -m64
+ ifeq ($(SUBARCH),BE)
+ 	ppc64_PURGATORY_EXTRA_LDFLAGS += -melf64ppc
+ else
+diff --git a/purgatory/arch/s390/Makefile b/purgatory/arch/s390/Makefile
+index 09749bd..c94cc3c 100644
+--- a/purgatory/arch/s390/Makefile
++++ b/purgatory/arch/s390/Makefile
+@@ -2,7 +2,6 @@
+ # Purgatory s390
+ #
+ 
+-s390_PURGATORY_EXTRA_CFLAGS += -fno-stack-protector
+ s390_PURGATORY_SRCS += purgatory/arch/s390/console-s390.c
+ s390_PURGATORY_SRCS += purgatory/arch/s390/setup-s390.S
+ s390_PURGATORY_SRCS += purgatory/arch/s390/purgatory-s390.c
+-- 
+2.7.4
+
