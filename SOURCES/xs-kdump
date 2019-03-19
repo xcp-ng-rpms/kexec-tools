@@ -1,0 +1,164 @@
+#! /bin/bash
+
+# chkconfig: 2345 01 99
+# description: configures the crash dump kernel
+
+. /etc/init.d/functions
+
+# Try to load settings from sysconfig
+if [[ -e /etc/sysconfig/kdump ]];
+then
+    . /etc/sysconfig/kdump
+fi
+
+# Defaults, overridden by /etc/sysconfig/kdump
+KEXEC=${KEXEC:-"/usr/sbin/kexec"}
+KDUMP_KERNEL_VERSION=${KDUMP_KERNEL_VERSION:-"$(uname -r | sed s/xen/kdump/)"}
+KDUMP_KERNEL_CMDLINE=${KDUMP_KERNEL_CMDLINE:-"$(cat /proc/cmdline)"}
+KDUMP_KERNEL_CMDLINE_EXTRA=${KDUMP_KERNEL_CMDLINE_EXTRA:-"udev.children-max=1 rd.udev.children-max=1 plymouth.enable=0 rd.plymouth=0 irqpoll nosmp reset_devices no-hlt panic=1 iommu=off nointremap i915.modeset=0 xen_vgt.vgt=0 init=/usr/sbin/kdump"}
+CRASH_COREDUMP=${CRASH_COREDUMP:-"no"}
+CRASH_LOG_DIR=${CRASH_LOG_DIR:-"/var/crash"}
+CRASH_LOGIN=${CRASH_LOGIN:-"no"}
+CRASH_REBOOT=${CRASH_REBOOT:-"yes"}
+CRASH_MAX_LOGS=${CRASH_MAX_LOGS:-"4"}
+CRASH_SPACE=${CRASH_SPACE:-"$CRASH_LOG_DIR/.sacrificial-space-for-logs"}
+CRASH_SPACE_SIZE_MB=${CRASH_SPACE_SIZE_MB:-64}
+
+if [[ -f /proc/vmcore ]]; then
+    echo "Cannot set up kdump because /proc/vmcore exists"
+    exit 1
+else
+    logger -t kdump $"Setting up crash kernel:"
+
+    # Find the current hypervisor version
+    if [[ -d "/sys/hypervisor/version/" ]] ; then
+        xen_major=$(cat /sys/hypervisor/version/major)
+        xen_minor=$(cat /sys/hypervisor/version/minor)
+        xen_extra=$(cat /sys/hypervisor/version/extra)
+        xen_version="${xen_major}.${xen_minor}${xen_extra}"
+    else
+        # Fall back to reading the boot symlink for a version
+        xen_version=$(readlink -f /boot/xen.gz | sed 's!/boot/xen-\(.*\)\.gz!\1!')
+        if [[ -h /boot/xen.gz && -n "$xen_version" ]] ; then
+            logger -t kdump $"Warning: Falling back to symlink version of xen '$xen_version'"
+        else
+            logger -t kdump $"Warning: can't find Xen version"
+        fi
+    fi
+
+    # Check for xen symbol file
+    xen_symfile="/boot/xen-$xen_version.map"
+    [[ -e "$xen_symfile" ]] || \
+        logger -t kdump $"Warning: can't find Xen symbol file '$xen_symfile'"
+
+    # Find the current dom0 kernel version
+    dom0_kernel_version=$(uname -r)
+
+    # Check for the dom0 symbol file
+    dom0_symfile="/boot/System.map-$dom0_kernel_version"
+    [[ -e "$dom0_symfile" ]] || \
+        logger -t kdump $"Warning: can't find Dom0 symbol file '$dom0_symfile'"
+
+    # Convert xen serial console parameters to kdump serial parameters
+    if [[ -n "$KDUMP_KERNEL_CMDLINE" ]] ; then
+        serialcon=''
+        # XXX HACK  xl currently bails if it can't stat /var/run/xenstored.pid, even
+        # though it doesn't use xenstored
+        touch /var/run/xenstored.pid
+        set -- $(xl info | grep xen_commandline)
+
+        shift 2 # skip "xen-commandline" and ":"
+        while [[ -n "$1" ]]; do
+            case $1 in
+                com1=*)
+                    port=ttyS0
+                    com1=${1#com1=};;
+                com2=*)
+                    port=ttyS1
+                    com2=${1#com2=};;
+                console=*)
+                    xsc=$(expr "$1" : '.*\(com[12]\)')
+                    if [[ -n "$xsc" ]]; then
+                        xenparam=$(eval echo \$$xsc)
+                        baud=$(expr "$xenparam" : '\([0-9]*\)')
+                        data=$(expr "$xenparam" : '[^,]*,\([0-9]\)')
+                        par=$(expr "$xenparam" : '[^,]*,[0-9]\(.\)')
+                        details="$port,$baud$par$data"
+                        serialcon="earlyprintk=serial,$details console=$details"
+                    fi
+                    break
+            esac
+            shift
+            ioport=$([[ -n "$port" ]] && cat "/sys/class/tty/$port/device/resources" 2>/dev/null | \
+                sed -n "/^io/ s/io \(0x[0-9a-f]\+\).*/\1/ p")
+        done
+
+        if echo "$KDUMP_KERNEL_CMDLINE" | grep -q 'xencons='; then
+            KDUMP_KERNEL_CMDLINE=$(echo "$KDUMP_KERNEL_CMDLINE" | \
+                sed -e "s/xencons=[^ ]*//; s/console=hvc0/$serialcon/; s/  / /g")
+        fi
+
+        # If we have an IO port and baud rate, enable serial in purgatory
+        [[ -n "$ioport" && -n "$baud" ]] && \
+            KEXEC_SERIAL_OPTIONS="--console-serial --serial=$ioport --serial-baud=$baud"
+    fi
+
+    # Append xen and dom0 version to kdump command line
+    [[ -n "$xen_version" ]] && \
+        KDUMP_KERNEL_CMDLINE="$KDUMP_KERNEL_CMDLINE kdump-xenversion=$xen_version"
+    [[ -n "$dom0_kernel_version" ]] && \
+        KDUMP_KERNEL_CMDLINE="$KDUMP_KERNEL_CMDLINE kdump-linuxversion=$dom0_kernel_version"
+
+    # Append extra arguments
+    KDUMP_KERNEL_CMDLINE="$KDUMP_KERNEL_CMDLINE $KDUMP_KERNEL_CMDLINE_EXTRA"
+    KERNEL="/boot/vmlinuz-${KDUMP_KERNEL_VERSION}"
+    INITRD="/boot/initrd-${KDUMP_KERNEL_VERSION}.img"
+
+    # Check we have a kernel
+    if [[ ! -f "$KERNEL" ]] ; then
+        echo -n $"No kdump kernel image found"; failure; echo
+        logger -t kdump $"Error: Unable to locate kdump kernel '$KERNEL'"
+        exit 1
+    fi
+
+    # Check we have an initrd
+    if [[ ! -f "$INITRD" ]] ; then
+        echo -n $"No kdump initrd found"; failure; echo
+        logger -t kdump $"Error: No kdump initrd '$INITRD' not found"
+        exit 1
+    fi
+
+    # Log some information
+    logger -t kdump $"Crash kernel: $KERNEL"
+    logger -t kdump $"Crash ramdisk: $INITRD"
+    logger -t kdump $"Crash kernel command line: $KDUMP_KERNEL_CMDLINE"
+
+    # Set up sacrificial crash space.
+    if [[ ! -e "$CRASH_SPACE" ]]; then
+        # If file does not exist, create it.  On error, such as a full
+        # filesytem, remove the crash space to give breathing room for
+        # services like ovs to start back up.
+        dd if=/dev/zero of="$CRASH_SPACE" bs=1M count="$CRASH_SPACE_SIZE_MB" &> /dev/null \
+            || { rm -f "$CRASH_SPACE"; touch "$CRASH_SPACE.failed"; }
+    else
+        # If file does exist, verify it is regular
+        if [[ ! -f "$CRASH_SPACE" ]]; then
+            echo -n $"Crash space exists, but is not regular file"; failure; echo
+            exit 1
+        fi
+    fi
+
+    # Actually try to load the crash kernel
+    action $"Loading crash kernel:" \
+        "$KEXEC" -p --elf64-core-headers $KEXEC_SERIAL_OPTIONS \
+        --append="$KDUMP_KERNEL_CMDLINE" --ramdisk="$INITRD" "$KERNEL"
+    if [[ $? -eq 0 ]]; then
+        logger -t kdump $"Loaded crash kernel"
+        exit 0
+    else
+        logger -t kdump $"Error: Failed to load crash kernel"
+        exit 1
+    fi
+fi
+
+exit $?

@@ -1,0 +1,12 @@
+[Unit]
+Description=Set up crash environment
+Conflicts=shutdown.target
+Before=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/xs-kdump
+
+[Install]
+WantedBy=multi-user.target

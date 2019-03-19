@@ -1,0 +1,46 @@
+# Location of the kexec command
+KEXEC=/usr/sbin/kexec
+
+# Location of the xen-crashdump-analyser command
+XCA=/usr/lib64/xen/bin/xen-crashdump-analyser
+
+# Extra command line arguments for xen-crashdump-analyser.
+# XCA will automatically be given the required parameters of
+# --outdir, --xen-symtab and --dom0-symtab
+XCA_CMDLINE_EXTRA="-v --dump-structures"
+
+# The kdump kernel version to load. By default we look for the same
+# version as the current kernel.
+KDUMP_KERNEL_VERSION="$(uname -r | sed s/xen/kdump/)"
+
+# The command line to pass to the kdump kernel. By default the command
+# line is taken from /proc/cmdline.
+KDUMP_KERNEL_CMDLINE="$(cat /proc/cmdline)"
+
+# Extra arguments for the command line. These are appended to the
+# command line from above. Useful for augmenting the default.
+KDUMP_KERNEL_CMDLINE_EXTRA="udev.children-max=1 rd.udev.children-max=1 plymouth.enable=0 rd.plymouth=0 irqpoll nosmp reset_devices no-hlt panic=1 iommu=off nointremap i915.modeset=0 xen_vgt.vgt=0 init=/usr/sbin/kdump"
+
+# Take a compressed coredump of Xen and Dom0
+CRASH_COREDUMP="no"
+
+# Base directory to write crash logs to.  Subdirectories with timestamps will be created.
+CRASH_LOG_DIR="/var/crash"
+
+# Login as root after taking a dump. "yes" or "no".
+CRASH_LOGIN="no"
+
+# Reboot after taking a dump. "yes" or "no".
+CRASH_REBOOT="yes"
+
+# Max number of crash logs to keep.  0 indicates that all logs should
+# be kept, else the most recent N logs will be kept.
+CRASH_MAX_LOGS="4"
+
+# Sacrificial file to ensure the crashdump analyser has space to write logs
+CRASH_SPACE="$CRASH_LOG_DIR/.sacrificial-space-for-logs"
+
+# Size of the sacrificial file, in MB
+CRASH_SPACE_SIZE_MB=64
+
+# Room for extra tweaks provided by the host installer

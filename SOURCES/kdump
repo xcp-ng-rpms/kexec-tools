@@ -1,0 +1,162 @@
+#! /bin/bash
+
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+export PATH
+
+# Try to load settings from sysconfig
+if [[ -e /etc/sysconfig/kdump ]];
+then
+    . /etc/sysconfig/kdump
+fi
+
+TIME=$(which time) # Need /usr/bin/time rather than bash builtin
+
+# Defaults, overridden by /etc/sysconfig/kdump
+KEXEC=${KEXEC:-"/usr/sbin/kexec"}
+XCA=${XCA:-"/usr/lib64/xen/bin/xen-crashdump-analyser"}
+XCA_CMDLINE_EXTRA=${XCA_CMDLINE_EXTRA:-"-v"}
+CRASH_LOG_DIR=${CRASH_LOG_DIR:-"/var/crash"}
+CRASH_LOGIN=${CRASH_LOGIN:-"no"}
+CRASH_REBOOT=${CRASH_REBOOT:-"yes"}
+CRASH_MAX_LOGS=${CRASH_MAX_LOGS:-"4"}
+CRASH_SPACE=${CRASH_SPACE:-"$CRASH_LOG_DIR/.sacrificial-space-for-logs"}
+CRASH_SPACE_SIZE_MB=${CRASH_SPACE_SIZE_MB:-64}
+
+crash_dump()
+{
+    CRASH_XENVERSION=""
+    CRASH_LINUXVERSION=""
+
+    echo "Remount root fs rw"
+    mount -o remount,rw /
+
+    # Pull CRASH_{XEN,LINUX}VERSION from the kernel command line
+    set -- $(cat /proc/cmdline)
+    while [[ -n "$1" ]]; do
+        case "$1" in
+            kdump-xenversion=*)
+                CRASH_XENVERSION="$(echo "$1" | sed -e 's/kdump-xenversion=//')"
+                ;;
+            kdump-linuxversion=*)
+                CRASH_LINUXVERSION="$(echo "$1" | sed -e 's/kdump-linuxversion=//')"
+                ;;
+        esac
+        shift
+    done
+
+    # Clean up /var/lock/subsys.  We have crashed, so none of the rc3 programs
+    # are actually running.  This will prevent rc6 from trying to shut them down.
+    rm -f /var/lock/subsys/*
+
+    # Do we need to consider removing some logs?
+    if [[ -d "$CRASH_LOG_DIR" && "$CRASH_MAX_LOGS" -gt 0 ]] ; then
+        FIND_CMD="find $CRASH_LOG_DIR/ -regextype emacs -maxdepth 1 -type d -regex $CRASH_LOG_DIR/[0-9]+.*"
+
+        # Current number of log directories
+        CUR_DUMPS=$($FIND_CMD | wc -l)
+
+        # Number of log directories to be removed, leaving room for the soon-to-be-generated log
+        DEL_NUM=$((1+$CUR_DUMPS-$CRASH_MAX_LOGS))
+
+        if [[ "$DEL_NUM" -gt 0 ]]; then
+            echo "Removing older log directories: OK"
+            # Find, sort (oldest first), top N of them, delete
+            $FIND_CMD | sort -n | head -n $DEL_NUM | xargs rm -rf
+        fi
+    fi
+
+    # Delete the sacrificial space.  Experimentally, a crash which fills
+    # the filesystem causes many mistruths to be given by stat &
+    # friends.  To make things easy, unconditionally delete the file
+    # here to be sure we have at least $CRASH_SPACE_SIZE free.
+    rm "$CRASH_SPACE"
+
+    dir=$CRASH_LOG_DIR/$(date  +%Y%m%d-%H%M%S-%Z)
+
+    # Try to set the core pattern sensibly
+    if [[ -f /proc/sys/kernel/core_pattern ]] ; then
+        OLD_CORE_PATTERN=$(cat /proc/sys/kernel/core_pattern)
+        echo "$dir/core.%e.%p" > /proc/sys/kernel/core_pattern
+        ulimit -c 16384 # 16M
+    fi
+
+    # Collect some initial information
+    echo -n $"Collecting initial information: "
+    mkdir -p "$dir"
+    readelf -Wl /proc/vmcore &> "$dir/readelf-Wl.out"
+    readelf -Wn /proc/vmcore &> "$dir/readelf-Wn.out"
+    sync
+    echo OK
+    echo s > /proc/sysrq-trigger
+
+    XEN_SYMTAB="/boot/xen-$CRASH_XENVERSION.map"
+    DOM0_SYMTAB="/boot/System.map-$CRASH_LINUXVERSION"
+
+    # Run xen-crashdump-analyser
+    if [[ -e $XCA ]] ; then
+        echo -n $"Running xen-crashdump-analyser: "
+
+        XCA_CMD="$XCA --outdir $dir --xen-symtab $XEN_SYMTAB \
+                --dom0-symtab $DOM0_SYMTAB $XCA_CMDLINE_EXTRA"
+
+        # Do we have gnu time utility
+        if [[ -n "$TIME" ]] ; then
+            $TIME -v -o "$dir/time-v.out" $XCA_CMD && echo OK || echo FAILURE
+        else
+            $XCA_CMD && echo OK || echo FAILURE
+        fi
+        sync
+        echo s > /proc/sysrq-trigger
+
+    else
+        echo "Xen Crashdump Analyser not found: FAILED"
+    fi
+
+    # Collect some subsequent information
+    echo -n "Collecting subsequent information: "
+    dmesg &> "$dir/dmesg.kexec.log"
+    sync
+    lspci -tv &> "$dir/lspci-tv.out"
+    sync
+    lspci -vv &> "$dir/lspci-vv.out"
+    sync
+    lspci -vvxxxx &> "$dir/lspci-vvxxxx.out"
+    sync
+    echo OK
+    echo s > /proc/sysrq-trigger
+
+    # Return core pattern to previous
+    if [[ -f /proc/sys/kernel/core_pattern ]] ; then
+        echo "$OLD_CORE_PATTERN" > /proc/sys/kernel/core_pattern
+    fi
+
+    # Capture Dom0 and Xen coredump and gzip compress
+    if [[ "$CRASH_COREDUMP" == "yes" ]] ; then
+        makedumpfile -c -X -d 1 /proc/vmcore $dir/coredump.bin
+        sync
+        echo s > /proc/sysrq-trigger
+    fi
+
+    # If this shell is not interactive, consider sulogin or reboot following analysis
+    if [[ "$-" != "i" ]] ; then
+        if [[ "$CRASH_LOGIN" == "yes" ]] ; then
+            systemctl emergency
+        fi
+
+        if [[ "$CRASH_REBOOT" == "yes" ]] ; then
+	    echo "Rebooting"
+            reboot
+	    echo "Clean shutdown failed, forcing reboot"
+	    umount -ar
+	    sync
+	    echo s > /proc/sysrq-trigger
+	    reboot -f
+        fi
+    fi
+}
+
+if [[ -f /proc/vmcore ]]; then
+    crash_dump
+else
+    echo "No crash kernel"
+fi
