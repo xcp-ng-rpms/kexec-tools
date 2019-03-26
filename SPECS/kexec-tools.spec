@@ -13,6 +13,7 @@ Source3: kdump.sysconfig
 Source5: kdump
 Source6: kdump.service
 
+BuildRequires: gcc
 BuildRequires: xen-dom0-libs-devel, zlib-devel, systemd, autoconf, automake
 Requires(post): systemd
 Requires(preun): systemd
