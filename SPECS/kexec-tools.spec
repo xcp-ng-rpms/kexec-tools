@@ -2,7 +2,7 @@ Name: kexec-tools
 Summary: kexec/kdump userspace tools
 Epoch: 1
 Version: 2.0.4
-Release: 1.1.4
+Release: 1.1.4%{dist}
 License: GPL
 
 Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/%{name}/archive?at=b2b9891ce6e&format=tar.gz&prefix=%{name}-%{version}#/%{name}-%{version}.tar.gz
