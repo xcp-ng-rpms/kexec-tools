@@ -15,7 +15,7 @@ fi
 KEXEC=${KEXEC:-"/usr/sbin/kexec"}
 KDUMP_KERNEL_VERSION=${KDUMP_KERNEL_VERSION:-"$(uname -r | sed s/xen/kdump/)"}
 KDUMP_KERNEL_CMDLINE=${KDUMP_KERNEL_CMDLINE:-"$(cat /proc/cmdline)"}
-KDUMP_KERNEL_CMDLINE_EXTRA=${KDUMP_KERNEL_CMDLINE_EXTRA:-"udev.children-max=1 rd.udev.children-max=1 plymouth.enable=0 rd.plymouth=0 irqpoll nosmp reset_devices no-hlt panic=1 iommu=off nointremap i915.modeset=0 xen_vgt.vgt=0 init=/usr/sbin/kdump"}
+KDUMP_KERNEL_CMDLINE_EXTRA=${KDUMP_KERNEL_CMDLINE_EXTRA:-"udev.children-max=1 rd.udev.children-max=1 plymouth.enable=0 rd.plymouth=0 irqpoll nr_cpus=1 reset_devices no-hlt panic=1 iommu=pt intel_iommu=on i915.modeset=0 init=/usr/sbin/kdump"}
 CRASH_COREDUMP=${CRASH_COREDUMP:-"no"}
 CRASH_LOG_DIR=${CRASH_LOG_DIR:-"/var/crash"}
 CRASH_LOGIN=${CRASH_LOGIN:-"no"}
