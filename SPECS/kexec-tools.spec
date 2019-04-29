@@ -1,17 +1,20 @@
 Name: kexec-tools
 Summary: kexec/kdump userspace tools
 Epoch: 1
-Version: 2.0.4
-Release: 1.1.4%{dist}
+Version: 2.0.15
+Release: 13%{?dist}
 License: GPL
 
-Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/%{name}/archive?at=b2b9891ce6e&format=tar.gz&prefix=%{name}-%{version}#/%{name}-%{version}.tar.gz
-Patch0: 0001-purgatory-Add-no-zero-initialized-in-bss-flag.patch
-Patch1: 0002-purgatory-force-PIC-PIE-SSP-off.patch
-Source2: xs-kdump
-Source3: kdump.sysconfig
-Source5: kdump
-Source6: kdump.service
+
+Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/kexec-tools/archive?at=v2.0.15&format=tar&prefix=kexec-tools-2.0.15#/kexec-tools-2.0.15.tar
+Source2: SOURCES/kexec-tools/xs-kdump
+Source3: SOURCES/kexec-tools/kdump.sysconfig
+Source5: SOURCES/kexec-tools/kdump
+Source6: SOURCES/kexec-tools/kdump.service
+
+
+Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/kexec-tools/archive?at=v2.0.15&format=tar&prefix=kexec-tools-2.0.15#/kexec-tools-2.0.15.tar) = 653318b38e5654cdcbb4d3fa87daa72bcb90537a
+
 
 BuildRequires: gcc
 BuildRequires: xen-dom0-libs-devel, zlib-devel, systemd, autoconf, automake
