@@ -102,9 +102,9 @@ else
                 sed -n "/^io/ s/io \(0x[0-9a-f]\+\).*/\1/ p")
         done
 
-        if echo "$KDUMP_KERNEL_CMDLINE" | grep -q 'xencons='; then
+        if echo "$KDUMP_KERNEL_CMDLINE" | grep -q 'console=hvc0'; then
             KDUMP_KERNEL_CMDLINE=$(echo "$KDUMP_KERNEL_CMDLINE" | \
-                sed -e "s/xencons=[^ ]*//; s/console=hvc0/$serialcon/; s/  / /g")
+                sed -e "s/console=hvc0/$serialcon/; s/  / /g")
         fi
 
         # If we have an IO port and baud rate, enable serial in purgatory
