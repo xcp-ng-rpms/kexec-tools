@@ -3,6 +3,8 @@
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
 export PATH
 
+umask 0022
+
 # Try to load settings from sysconfig
 if [[ -e /etc/sysconfig/kdump ]];
 then
