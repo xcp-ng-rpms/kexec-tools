@@ -8,7 +8,7 @@ Name: kexec-tools
 Summary: kexec/kdump userspace tools
 Epoch: 1
 Version: 2.0.15
-Release: %{?xsrel}%{?dist}
+Release: %{?xsrel}.0.xen417.1%{?dist}
 License: GPL
 
 Source0: kexec-tools-2.0.15.tar.gz
@@ -90,6 +90,9 @@ exit 0
 %{?_cov_results_package}
 
 %changelog
+* Thu Feb 08 2024 Thierry Escande <thierry.escande@vates.tech> - 2.0.15-18.0.xen417.1
+- Rebuild for Xen 4.17 test build
+
 * Mon Feb 21 2022 Ross Lagerwall <ross.lagerwall@citrix.com> - 2.0.15-18
 - CP-38416: Enable static analysis
 
