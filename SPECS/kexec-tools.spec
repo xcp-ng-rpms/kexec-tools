@@ -1,6 +1,6 @@
-%global package_speccommit d8e6ad7d4fd95d69a463e69bb651ffd8c17029ed
+%global package_speccommit 7c577b2097d0549ab2242ba92276c3a17e0650f4
 %global usver 2.0.15
-%global xsver 18
+%global xsver 19
 %global xsrel %{xsver}%{?xscount}%{?xshash}
 %global package_srccommit v2.0.15
 
@@ -90,6 +90,9 @@ exit 0
 %{?_cov_results_package}
 
 %changelog
+* Fri Jan 26 2024 Andrew Cooper <andrew.cooper3@citrix.com> - 2.0.15-19
+- Rebuild against Xen 4.17
+
 * Mon Feb 21 2022 Ross Lagerwall <ross.lagerwall@citrix.com> - 2.0.15-18
 - CP-38416: Enable static analysis
 
