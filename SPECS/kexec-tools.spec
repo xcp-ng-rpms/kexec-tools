@@ -1,6 +1,6 @@
-%global package_speccommit 7c577b2097d0549ab2242ba92276c3a17e0650f4
+%global package_speccommit 38e0dbb68269e47ff4e5c49f487528f50f0e927d
 %global usver 2.0.15
-%global xsver 19
+%global xsver 20
 %global xsrel %{xsver}%{?xscount}%{?xshash}
 %global package_srccommit v2.0.15
 
@@ -16,6 +16,7 @@ Source2: xs-kdump
 Source3: kdump.sysconfig
 Source5: kdump
 Source6: kdump.service
+Patch0: 0001-kexec-tools-Remove-duplicated-variable-declarations.patch
 
 BuildRequires: xen-dom0-libs-devel, zlib-devel, systemd, autoconf, automake
 %{?_cov_buildrequires}
@@ -89,6 +90,9 @@ exit 0
 %{?_cov_results_package}
 
 %changelog
+* Mon Mar 11 2024 Frediano Ziglio <frediano.ziglio@cloud.com> - 2.0.15-20
+- Remove duplicate declaration causing newer toolchain to fail to compile
+
 * Fri Jan 26 2024 Andrew Cooper <andrew.cooper3@citrix.com> - 2.0.15-19
 - Rebuild against Xen 4.17
 
