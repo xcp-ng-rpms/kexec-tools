@@ -8,7 +8,7 @@ Name: kexec-tools
 Summary: kexec/kdump userspace tools
 Epoch: 1
 Version: 2.0.15
-Release: %{?xsrel}%{?dist}
+Release: %{?xsrel}.1%{?dist}
 License: GPL
 
 Source0: kexec-tools-2.0.15.tar.gz
@@ -17,6 +17,9 @@ Source3: kdump.sysconfig
 Source5: kdump
 Source6: kdump.service
 Patch0: 0001-kexec-tools-Remove-duplicated-variable-declarations.patch
+
+# XCP-ng patches
+Patch1000: 0001-kexec-Remove-the-error-prone-kernel_version-function.patch
 
 BuildRequires: gcc
 BuildRequires: xen-dom0-libs-devel, zlib-devel, systemd, autoconf, automake
@@ -91,6 +94,10 @@ exit 0
 %{?_cov_results_package}
 
 %changelog
+* Fri Sep 13 2024 Thierry Escande <thierry.escande@vates.tech> - 2.0.15-20.1
+- Backport patch removing kernel_version(), fixing bug for kernel with
+  patchlevel greater than 255
+
 * Mon Mar 11 2024 Frediano Ziglio <frediano.ziglio@cloud.com> - 2.0.15-20
 - Remove duplicate declaration causing newer toolchain to fail to compile
 
