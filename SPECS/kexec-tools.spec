@@ -1,6 +1,6 @@
-%global package_speccommit 38e0dbb68269e47ff4e5c49f487528f50f0e927d
+%global package_speccommit 6246c330aca9ff5312359e74d4b5516b69287cc1
 %global usver 2.0.15
-%global xsver 20
+%global xsver 21
 %global xsrel %{xsver}%{?xscount}%{?xshash}
 %global package_srccommit v2.0.15
 
@@ -90,6 +90,9 @@ exit 0
 %{?_cov_results_package}
 
 %changelog
+* Mon Apr 13 2026 Frediano Ziglio <frediano.ziglio@citrix.com> - 2.0.15-21
+- CP-312109: Avoid to wait indefinitely for initilisation
+
 * Mon Mar 11 2024 Frediano Ziglio <frediano.ziglio@cloud.com> - 2.0.15-20
 - Remove duplicate declaration causing newer toolchain to fail to compile
 
