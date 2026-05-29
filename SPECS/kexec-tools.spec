@@ -8,7 +8,7 @@ Name: kexec-tools
 Summary: kexec/kdump userspace tools
 Epoch: 1
 Version: 2.0.15
-Release: %{?xsrel}.1%{?dist}
+Release: %{?xsrel}.1~XCPNG3327.1%{?dist}
 License: GPL
 
 Source0: kexec-tools-2.0.15.tar.gz
