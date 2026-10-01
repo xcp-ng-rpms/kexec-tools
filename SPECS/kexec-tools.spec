@@ -1,6 +1,6 @@
 Name: kexec-tools
 Version: 2.0.32
-Release: 3%{?dist}
+Release: 3.1%{?dist}
 URL: https://kernel.org/pub/linux/utils/kernel/kexec
 License: GPL-2.0-only
 Summary: The kexec/kdump userspace component
@@ -13,6 +13,9 @@ BuildRequires: libtool
 BuildRequires: gcc
 BuildRequires: xz-devel
 BuildRequires: zlib-devel
+# Require xen-dom0-libs-devel. Otherwise the compilation will succeed,
+# but will silently disable Xen support if xenctrl.h was not found.
+BuildRequires: xen-dom0-libs-devel
 
 #START INSERT
 
@@ -78,6 +81,11 @@ rm -f kexec-tools.spec.in
 %make_install
 rm -f %{buildroot}/%{_libdir}/kexec-tools/kexec_test
 
+%check
+# Check kexec-tools was properly linked against libxenctrl.
+# Otherwise exit instead of shipping a broken package.
+objdump -p %{buildroot}%{_sbindir}/kexec | grep -q 'NEEDED.*libxenctrl'
+
 
 %files
 %{_sbindir}/kexec
@@ -89,6 +97,9 @@ rm -f %{buildroot}/%{_libdir}/kexec-tools/kexec_test
 %doc TODO
 
 %changelog
+* Thu Oct 01 2026 Julian Vetter <julian.vetter@vates.tech> - 2.0.32-3.1
+- Build with Xen support (BuildRequires xen-dom0-libs-devel)
+- Fail the build if kexec isn't linked against libxenctrl
 
 * Wed Jan 21 2026 Coiby Xu <coxu@redhat.com> - 2.0.32-3
 - Drop weak dependency on kdump-utils (RHEL-138692)
