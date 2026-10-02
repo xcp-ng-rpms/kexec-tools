@@ -23,6 +23,9 @@ Source6: kdump.service
 Patch0: use-x86-64-abi.patch
 Patch1: add_kexec_load_v2.patch
 
+# XCP-ng patches
+Patch1000: 0001-xen-Fix-int-to-pointer-assignment-in-do_xen_bzImage6.patch
+
 BuildRequires: gcc
 BuildRequires: xen-dom0-libs-devel, zlib-devel, systemd, autoconf, automake
 %{?_cov_buildrequires}
@@ -95,6 +98,8 @@ exit 0
 * Fri Oct 02 2026 Julian Vetter <julian.vetter@vates.tech> - 2.0.29-8.1
 - Sync with 2.0.29-8
 - Drop the kernel_version() removal patch, included in 2.0.29
+- Fix int-to-pointer assignment in do_xen_bzImage64_load(), which breaks
+  the build with GCC 14 and later
 - *** Upstream changelog ***
   * Mon Apr 27 2026 Andrew Cooper <andrew.cooper3@citrix.com> - 2.0.29-8
   - Rebuild against Xen 4.21
