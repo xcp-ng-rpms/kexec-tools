@@ -23,6 +23,9 @@ Source6: kdump.service
 Patch0: use-x86-64-abi.patch
 Patch1: add_kexec_load_v2.patch
 
+# XCP-ng patches
+Patch1000: 0001-xen-Fix-int-to-pointer-assignment-in-do_xen_bzImage6.patch
+
 BuildRequires: gcc
 BuildRequires: xen-dom0-libs-devel, zlib-devel, systemd, autoconf, automake
 %{?_cov_buildrequires}
@@ -95,6 +98,8 @@ exit 0
 * Fri Oct 02 2026 Julian Vetter <julian.vetter@vates.tech> - 2.0.29-8.1
 - Sync with 2.0.29-8
 - Drop the kernel_version() removal patch, included in 2.0.29
+- Fix int-to-pointer assignment in do_xen_bzImage64_load(), which breaks
+  the build with GCC 14 and later
 
 * Fri Sep 13 2024 Thierry Escande <thierry.escande@vates.tech> - 2.0.15-20.1
 - Backport patch removing kernel_version(), fixing bug for kernel with
