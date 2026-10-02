@@ -1,10 +1,5 @@
 #! /bin/bash
 
-# chkconfig: 2345 01 99
-# description: configures the crash dump kernel
-
-. /etc/init.d/functions
-
 # Try to load settings from sysconfig
 if [[ -e /etc/sysconfig/kdump ]];
 then
@@ -15,7 +10,7 @@ fi
 KEXEC=${KEXEC:-"/usr/sbin/kexec"}
 KDUMP_KERNEL_VERSION=${KDUMP_KERNEL_VERSION:-"$(uname -r | sed s/xen/kdump/)"}
 KDUMP_KERNEL_CMDLINE=${KDUMP_KERNEL_CMDLINE:-"$(cat /proc/cmdline)"}
-KDUMP_KERNEL_CMDLINE_EXTRA=${KDUMP_KERNEL_CMDLINE_EXTRA:-"udev.children-max=1 rd.udev.children-max=1 plymouth.enable=0 rd.plymouth=0 irqpoll nr_cpus=1 reset_devices no-hlt panic=1 hest_disable iommu=pt intel_iommu=on i915.modeset=0 init=/usr/sbin/kdump"}
+KDUMP_KERNEL_CMDLINE_EXTRA=${KDUMP_KERNEL_CMDLINE_EXTRA:-"udev.children-max=1 rd.udev.children-max=1 plymouth.enable=0 rd.plymouth=0 irqpoll nr_cpus=1 reset_devices no-hlt panic=1 hest_disable iommu.passthrough=0 intel_iommu=on i915.modeset=0 rd.timeout=600 rd.emergency=reboot rd.shell=0 oops=panic init=/usr/sbin/kdump"}
 CRASH_COREDUMP=${CRASH_COREDUMP:-"no"}
 CRASH_LOG_DIR=${CRASH_LOG_DIR:-"/var/crash"}
 CRASH_LOGIN=${CRASH_LOGIN:-"no"}
@@ -125,14 +120,14 @@ else
 
     # Check we have a kernel
     if [[ ! -f "$KERNEL" ]] ; then
-        echo -n $"No kdump kernel image found"; failure; echo
+        echo $"No kdump kernel image found"
         logger -t kdump $"Error: Unable to locate kdump kernel '$KERNEL'"
         exit 1
     fi
 
     # Check we have an initrd
     if [[ ! -f "$INITRD" ]] ; then
-        echo -n $"No kdump initrd found"; failure; echo
+        echo $"No kdump initrd found"
         logger -t kdump $"Error: No kdump initrd '$INITRD' not found"
         exit 1
     fi
@@ -152,20 +147,21 @@ else
     else
         # If file does exist, verify it is regular
         if [[ ! -f "$CRASH_SPACE" ]]; then
-            echo -n $"Crash space exists, but is not regular file"; failure; echo
+            echo $"Crash space exists, but is not regular file"
             exit 1
         fi
     fi
 
+    echo $"Loading crash kernel:"
     # Actually try to load the crash kernel
-    action $"Loading crash kernel:" \
-        "$KEXEC" -p --elf64-core-headers $KEXEC_SERIAL_OPTIONS \
+    "$KEXEC" -p --elf64-core-headers $KEXEC_SERIAL_OPTIONS \
         --append="$KDUMP_KERNEL_CMDLINE" --ramdisk="$INITRD" "$KERNEL"
     if [[ $? -eq 0 ]]; then
+        echo $"Loaded crash kernel"
         logger -t kdump $"Loaded crash kernel"
         exit 0
     else
-        logger -t kdump $"Error: Failed to load crash kernel"
+        logger -s -t kdump $"Error: Failed to load crash kernel"
         exit 1
     fi
 fi
