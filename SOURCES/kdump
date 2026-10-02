@@ -158,7 +158,9 @@ crash_dump()
 	    umount -ar
 	    sync
 	    echo s > /proc/sysrq-trigger
-	    reboot -f
+            reboot -fd
+            # if even above fails use sysrq
+            echo b > /proc/sysrq-trigger
         fi
     fi
 }
