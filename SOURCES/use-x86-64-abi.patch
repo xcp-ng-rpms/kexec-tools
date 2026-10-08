@@ -1,0 +1,19 @@
+Use x86-64 ABI for purgatory
+
+With the compiler defaulting to x86-64-v3, set purgatory to compile using
+x86-64 since the environment isn't set up correctly to use AVX, etc.
+At the same time, add some additional flags to ensure that the compiler doesn't
+use any SIMD instructions.
+
+Signed-off-by: Ross Lagerwall <ross.lagerwall@citrix.com>
+diff --git a/purgatory/arch/x86_64/Makefile b/purgatory/arch/x86_64/Makefile
+index b0e277a365b2..fd19229a2bf4 100644
+--- a/purgatory/arch/x86_64/Makefile
++++ b/purgatory/arch/x86_64/Makefile
+@@ -24,5 +24,5 @@ x86_64_PURGATORY_SRCS += purgatory/arch/i386/vga.c
+ x86_64_PURGATORY_SRCS += purgatory/arch/i386/pic.c
+ 
+ ifneq ($(SUBARCH),x32)
+-x86_64_PURGATORY_EXTRA_CFLAGS = -mcmodel=large
++x86_64_PURGATORY_EXTRA_CFLAGS = -mcmodel=large -march=x86-64 -mno-mmx -mno-sse -mno-sse2 -mno-avx
+ endif

@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Julian Vetter <julian.vetter@vates.tech>
+Date: Fri, 2 Oct 2026 10:27:31 +0200
+Subject: [PATCH] xen: Fix int-to-pointer assignment in do_xen_bzImage64_load()
+
+info->entry is a void pointer, but do_xen_bzImage64_load() assigns the
+unsigned long setup_base to it without a cast. GCC 14 turns
+-Wint-conversion into an error by default, which breaks the build.
+
+Signed-off-by: Julian Vetter <julian.vetter@vates.tech>
+
+diff --git a/kexec/arch/x86_64/kexec-bzImage64.c b/kexec/arch/x86_64/kexec-bzImage64.c
+index 9c03061b4064..1cf2b3bc51b2 100644
+--- a/kexec/arch/x86_64/kexec-bzImage64.c
++++ b/kexec/arch/x86_64/kexec-bzImage64.c
+@@ -240,7 +240,7 @@ static int do_xen_bzImage64_load(struct kexec_info *info,
+ 		info->segment[info->nr_segments-1].is_kernel = true;
+ 	}
+ 
+-	info->entry = setup_base; // Kernel parameters
++	info->entry = (void *)setup_base; // Kernel parameters
+ 
+ 
+ 	/* Tell the kernel what is going on */
