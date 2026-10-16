@@ -12,7 +12,7 @@ Epoch: 1
 Epoch: 0
 %endif
 Version: 2.0.29
-Release: %{?xsrel}.1%{?dist}
+Release: %{?xsrel}.2%{?dist}
 License: GPL
 
 Source0: kexec-tools-2.0.29.tar.gz
@@ -32,6 +32,7 @@ BuildRequires: xen-dom0-libs-devel, zlib-devel, systemd, autoconf, automake
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
+Recommends: xen-crashdump-analyser
 
 %description
 kexec-tools, built and packaged as part of XenServer.
@@ -95,6 +96,9 @@ exit 0
 %{?_cov_results_package}
 
 %changelog
+* Thu Oct 08 2026 Julian Vetter <julian.vetter@vates.tech> - 2.0.29-8.2
+- Add Recommends: xen-crashdump-analyser, used by the kdump script
+
 * Fri Oct 02 2026 Julian Vetter <julian.vetter@vates.tech> - 2.0.29-8.1
 - Sync with 2.0.29-8
 - Drop the kernel_version() removal patch, included in 2.0.29
